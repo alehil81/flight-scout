@@ -1,0 +1,2 @@
+# flight-scout
+Flight finder
