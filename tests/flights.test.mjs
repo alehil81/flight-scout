@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {params,validate,normalize,googleLink} from '../lib/flights.ts';
+const s={origins:['RNO','SMF','SFO','OAK'],destinations:'LIS,MAD',depart:'2027-03-27',back:'2027-04-03',oneway:false,adults:3,children:0,cabin:'1',stops:1,duration:24,budget:0,sort:'price'};
+assert.equal(params(s).get('departure_id'),'RNO,SMF,SFO,OAK');
+for(const [stops,api] of [[0,'1'],[1,'2'],[2,'3'],[3,'0']])assert.equal(params({...s,stops}).get('stops'),api);
+assert.equal(params({...s,oneway:true}).has('return_date'),false);
+assert.equal(params({...s,sort:'duration'}).get('sort_by'),'5');
+assert.throws(()=>validate({...s,origins:[]}));
+assert.throws(()=>validate({...s,back:'2027-03-26'}));
+assert.throws(()=>validate({...s,depart:'2027-02-31'}));
+assert.throws(()=>validate({...s,destinations:'LIS&api_key=bad'}));
+assert.throws(()=>validate({...s,adults:10}));
+const airport=(id,time)=>({id,time});
+const f=normalize({best_flights:[{price:1200,total_duration:900,departure_token:'token',flights:[{airline:'Test Airline',flight_number:'AB1',departure_airport:airport('RNO','2027-03-27 06:00'),arrival_airport:airport('LAX','2027-03-27 08:00'),duration:120},{airline:'Test Airline',flight_number:'AB2',departure_airport:airport('LAX','2027-03-27 10:00'),arrival_airport:airport('LIS','2027-03-28 06:00'),duration:660}],layovers:[{id:'LAX',duration:120}]}]})[0];
+assert.equal(f.origin,'RNO');assert.equal(f.destination,'LIS');assert.equal(f.stops,1);assert.equal(f.duration,900);assert.equal(f.price,1200);assert.equal(f.legs.length,2);assert.equal(f.token,'token');
+assert.match(decodeURIComponent(googleLink(s)),/3 adults/);
+assert.match(decodeURIComponent(googleLink(s,'SMF','LIS')),/from SMF to LIS/);
+console.log('Flight validation, query mapping, link and normalization checks passed.');
